@@ -57,7 +57,7 @@ app.UseExceptionHandler(errorApp =>
             context.Response.ContentType = "application/json";
             var response = new
             {
-                error = "Um erro inesperado aconteceu, tente novamente ou acione e caso persista, acione o suporte!"
+                error = "Um erro inesperado aconteceu, tente novamente e caso o erro  persista, acione o suporte!"
             };
             await context.Response.WriteAsJsonAsync(response);
         }

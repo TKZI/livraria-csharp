@@ -23,25 +23,7 @@ namespace Livraria.Models
         [NotNull]
         public virtual List<LivroAutor> Autores { get; set; } = new List<LivroAutor>();
 
-        public void associarAutor(LivroAutor livroAutor)
-        {
-            if (Autores.Contains(livroAutor))
-            {
-                throw new HttpStatusCodeException(HttpStatusCode.BadRequest, "Autor já está associado a este livro!");
-            }
-
-            Autores.Add(livroAutor);
-        }
-
-        public void dessassociarAutor(LivroAutor livroAutor)
-        {
-            
-            
-                Autores.Remove(livroAutor);
-            
-            
-            }
-            
+        
 
             
         }
