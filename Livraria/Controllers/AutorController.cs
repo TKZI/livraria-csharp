@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using Livraria.DTO;
+using Livraria.DTO.Input;
+using Livraria.DTO.Modelo;
 using Livraria.Models;
 using Livraria.repository;
 using Microsoft.AspNetCore.Http;
@@ -38,15 +39,17 @@ namespace Livraria.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<AutorDTO>> SalvarAutor(Autor autor) {
-            var AutorDTO = _mapper.Map<AutorDTO>( await _autorRepository.CreateAutorAscync(autor));
+        public async Task<ActionResult<AutorDTO>> SalvarAutor(AutorInputDTO autor) {
+            var autorAssembler = _mapper.Map<Autor>(autor);
+            var AutorDTO = _mapper.Map<AutorDTO>( await _autorRepository.CreateAutorAscync(autorAssembler));
             return Created("", AutorDTO);
         }
 
         [HttpPut("{id}")]
-        public async Task<ActionResult<AutorDTO>> AtualizarAutor(int id, Autor autor)
+        public async Task<ActionResult<AutorDTO>> AtualizarAutor(int id, AutorInputDTO autor)
         {
-            var AutorDTO = _mapper.Map<AutorDTO>(await _autorRepository.UpdateAutorAscync(autor, id));
+            var autorAssembler = _mapper.Map<Autor>(autor);
+            var AutorDTO = _mapper.Map<AutorDTO>(await _autorRepository.UpdateAutorAscync(autorAssembler, id));
 
             return Ok(AutorDTO);
         }

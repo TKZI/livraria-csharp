@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
 using Livraria.DataContext;
+using Livraria.DTO.Input;
 using Livraria.Exceptions;
 using Livraria.Models;
 using Livraria.repository;
 using Microsoft.EntityFrameworkCore;
+using OpenQA.Selenium.DevTools.V123.Page;
 using System.ComponentModel;
 using System.Net;
 
@@ -14,7 +16,7 @@ namespace Livraria.service
         readonly ApplicationDbContext _context;
         readonly IMapper _mapper;
         readonly IAutorRepository _repository;
-    
+
         public LivroService(ApplicationDbContext context, IMapper mapper, IAutorRepository repository)
         {
             _context = context;
@@ -24,23 +26,44 @@ namespace Livraria.service
 
 
 
-        public async Task<Livro> CreateLivroAscync(Livro livro)
+        public async Task<Livro> CreateLivroAscync(LivroInputDTO livro)
         {
-            Livro livroAdicionado = livro;
-            
-            if (livroAdicionado != null)
+            Livro livroAdicionado = new Livro
             {
-                await _context.Livro.AddAsync(livro);
-                await _context.SaveChangesAsync();
-                return livroAdicionado;
-            }
-            else
+                Titulo = livro.Titulo,
+                AnoPublicacao = livro.anoPublicacao
+
+            };
+            await _context.Livro.AddAsync(livroAdicionado);
+            foreach (var item in livro.AutorInputIdDTO.AutoresIds)
             {
-                throw new HttpStatusCodeException(HttpStatusCode.BadRequest ,"Não foi inserido dados Validos para inserção do livro!");
+                Autor autor = await _context.Autor.FirstOrDefaultAsync(x => x.Id == item);
+                if (autor == null)
+                {
+                    throw new HttpStatusCodeException(HttpStatusCode.BadRequest, "autor não encontrado");
+                }
+
+                LivroAutor livroAutor = new LivroAutor
+                {
+                    Autor = autor,
+                    Livro = livroAdicionado,
+                    AutorId = item,
+                    LivroId = livroAdicionado.Id,
+                };
+                
+               await _context.LivroAutor.AddAsync(livroAutor);
+
             }
+           await  _context.SaveChangesAsync();
+
+            return livroAdicionado;
+            }
+
+       
+
+ 
             
-            
-        }
+        
 
         public async Task DeleteLivroAscync(int id)
         {
@@ -60,50 +83,93 @@ namespace Livraria.service
 
         public async Task<Livro> GetLivroByIdAscync(int id)
         {
-            try
+            
+                Livro livro = await _context.Livro.FindAsync(id);
+
+            if (livro != null)
             {
-                Livro livro = await _context.Livro.FirstOrDefaultAsync(x => x.Id == id);
 
                 return livro;
             }
-            catch (Exception ex)
+            else
             {
-                throw new HttpStatusCodeException(HttpStatusCode.NotFound ,"Livro não encontrado!");
+                throw  new HttpStatusCodeException(HttpStatusCode.NotFound, "Livro não encontrado");
             }
+            
+            
             
         }
 
-       public async Task<Livro> UpdateLivroAscync(Livro livro, int id)
+       public async Task<Livro> UpdateLivroAscync(Livro livro, LivroInputDTO livroInputDTO)
         {
-            Livro LivroAtual = await GetLivroByIdAscync(id);
-            _mapper.Map(livro, LivroAtual);
+            var livroAtual = await _context.Livro.Include(l => l.Autores)
+                                          .FirstOrDefaultAsync(l => l.Id == livro.Id);
+
+            livroAtual.AnoPublicacao = livroInputDTO.anoPublicacao;
+            livroAtual.Titulo = livroInputDTO.Titulo;
+            livroAtual.Autores.Clear();
+            foreach (var autorId in livroInputDTO.AutorInputIdDTO.AutoresIds)
+            {
+                // Verifica se o autor existe no banco de dados
+                var autorExistente = await _context.Autor.FirstOrDefaultAsync(a => a.Id == autorId);
+                if (autorExistente == null)
+                {
+                    throw new HttpStatusCodeException(HttpStatusCode.BadRequest, $"Autor com ID {autorId} não encontrado!");
+                }
+
+                // Adicionar a associação LivroAutor
+                livroAtual.Autores.Add(new LivroAutor
+                {
+                    LivroId = livroAtual.Id,
+                    AutorId = autorExistente.Id
+                });
+            }
+
             await _context.SaveChangesAsync();
-            return LivroAtual;
+            return livro;
         }
 
         public async Task AssociarAutorLivro(int autorId, int livroId)
         {
-            Livro Livro =  await GetLivroByIdAscync(livroId);
-            var Autor = await _repository.GetAutorByIdAscync(autorId);
-            LivroAutor livroAutor = new LivroAutor
+           var autor = await _context.Autor.FindAsync(autorId);
+            var livro = await _context.Livro.FindAsync(livroId);
+            if (autor == null || livro == null)
             {
-                AutorId = autorId,
-                LivroId = livroId
-            };
-            Livro.associarAutor(livroAutor);
-           
+                throw new HttpStatusCodeException(HttpStatusCode.BadRequest, "autor ou livro não encontrado!");
+            }
+            try
+            {
+                LivroAutor livronovo = new LivroAutor
+                {
+                    AutorId = autorId,
+                    LivroId = livroId
+                };
+                _context.LivroAutor.Add(livronovo);
 
-        }
-        public async Task DesassociarAutorLivro(int autorId, int livroId)
-        {
-            Livro livro = await GetLivroByIdAscync(livroId);
-            var Autor = await _repository.GetAutorByIdAscync(autorId);
-            LivroAutor livroAutor = new LivroAutor
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
             {
-                AutorId = autorId,
-                LivroId = livroId
-            };
-            livro.dessassociarAutor(livroAutor);
+                throw new HttpStatusCodeException(HttpStatusCode.BadRequest, "Autor já está vinculado a este livro!");
+
+            }
+
+            }
+            public async Task DesassociarAutorLivro(int autorId, int livroId)
+        {
+            var livroAtual = await _context.Livro.Include(l => l.Autores)
+                                          .FirstOrDefaultAsync(l => l.Id == livroId);
+            if (livroAtual == null)
+            {
+                throw new HttpStatusCodeException(HttpStatusCode.BadRequest,$"Livro com ID {livroId} não encontrado.");
+            }
+            var livroAutor = await _context.LivroAutor.FirstOrDefaultAsync(la => la.AutorId == autorId && la.LivroId == livroId);
+            if (livroAutor == null)
+            {
+                throw new HttpStatusCodeException(HttpStatusCode.BadRequest, $"Associação entre autor com ID {autorId} e livro com ID {livroId} não encontrada.");
+            }
+            livroAtual.Autores.Remove(livroAutor);
+            await _context.SaveChangesAsync();
         }
         
 

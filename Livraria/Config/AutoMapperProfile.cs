@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using Livraria.DTO;
+using Livraria.DTO.Input;
+using Livraria.DTO.Modelo;
 using Livraria.Models;
 
 namespace Livraria.Config
@@ -19,6 +20,12 @@ namespace Livraria.Config
             //map para update de autor e ignorar o id 
             CreateMap<Autor, Autor>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore());
+
+            CreateMap<LivroInputDTO, Livro>()
+            .ForMember(dest => dest.Autores, opt => opt.MapFrom(src => src.AutorInputIdDTO.AutoresIds.Select(id => new LivroAutor { AutorId = id })));
+
+            CreateMap<AutorInputDTO, Autor>();
+
         }
     }
 }

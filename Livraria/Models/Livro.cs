@@ -1,6 +1,7 @@
 ﻿using Livraria.Exceptions;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Net;
 
@@ -19,7 +20,8 @@ namespace Livraria.Models
         [Column("ano_publicacao")]
         public int AnoPublicacao { get; set; }
 
-        public virtual  List<LivroAutor> Autores { get; } = new List<LivroAutor>();
+        [NotNull]
+        public virtual List<LivroAutor> Autores { get; set; } = new List<LivroAutor>();
 
         public void associarAutor(LivroAutor livroAutor)
         {
@@ -33,17 +35,15 @@ namespace Livraria.Models
 
         public void dessassociarAutor(LivroAutor livroAutor)
         {
-            if (Autores.Contains(livroAutor))
-            {
+            
+            
                 Autores.Remove(livroAutor);
-            }
-            else
-            {
-                throw new HttpStatusCodeException(HttpStatusCode.BadRequest, "Autor não está associado a este livro!");
+            
+            
             }
             
 
             
         }
     }
-}
+

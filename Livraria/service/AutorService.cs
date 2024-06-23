@@ -34,8 +34,13 @@ namespace Livraria.service
 
         public async  Task DeleteAutorAscync(int id)
         {
-            var Autor = GetAutorByIdAscync(id);
-                 _context.Remove(Autor);
+            var Autor = await _context.Autor.FirstOrDefaultAsync(x => x.Id == id);
+            if(Autor == null)
+            {
+                throw new HttpStatusCodeException(HttpStatusCode.BadRequest, "Autor não existe!");
+            }
+
+             _context.Remove(Autor);
             await _context.SaveChangesAsync();
         }
 
