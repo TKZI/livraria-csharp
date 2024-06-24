@@ -11,7 +11,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.t
 
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+});
 
 
 builder.Services.AddControllers()
@@ -70,7 +79,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-
+app.UseCors("AllowAll");
 
 app.UseHttpsRedirection();
 
